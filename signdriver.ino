@@ -133,7 +133,7 @@ void loop() {
   {
     for (int byt = 0; byt < 32; byt++)
     {
-      SPI.transfer ((rows[disp_screen != 0][y][byt] ^ 0xff) & power_switch);
+      SPI.transfer ((rows[disp_screen != 0][y][byt] & power_switch ) ^ 0xff );
     }
 
     digitalWrite(PIN_EN, HIGH);
