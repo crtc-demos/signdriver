@@ -73,10 +73,13 @@ void setup() {
   Serial.begin(9600);
 }
 
-static unsigned char rows[16][32];
+static unsigned char rows[2][16][32];
+static int cur_screen = 0;
 static int cur_row = 0;
 static int cur_nybble = 0;
 static int cur_byte = 0;
+static int disp_screen = 0;
+static int power_switch = 0x00;
 
 int decodechar (char c)
 {
@@ -88,8 +91,9 @@ void loop() {
   while (Serial.available() > 0)
   {
     int x, incomingByte = Serial.read();
-    if (incomingByte == '\r' || incomingByte == '\n')
+    if (incomingByte == '\r' || incomingByte == '\n' || incomingByte == 'X' )
     {
+      cur_screen = 0;
       cur_row = 0;
       cur_nybble = 0;
       cur_byte = 0;
@@ -99,9 +103,9 @@ void loop() {
     if (x == -1)
       continue;
     if (cur_nybble == 0)
-      rows[cur_row][cur_byte] = x;
+      rows[cur_screen][cur_row][cur_byte] = x;
     else
-      rows[cur_row][cur_byte] |= x << 4;
+      rows[cur_screen][cur_row][cur_byte] |= x << 4;
     cur_nybble++;
     if (cur_nybble == 2)
     {
@@ -111,14 +115,26 @@ void loop() {
       {
         cur_byte = 0;
         cur_row++;
+        if (cur_row == 16 )
+        {
+          cur_row = 0;
+            if ( cur_screen == 1 )
+            {
+              power_switch = 0xff;
+            }
+          cur_screen = 1-cur_screen;
+        }
       }
     }
   }
   
+  disp_screen = (disp_screen+1) & 7;
   for ( int y = 0; y < 16  ; y++ )
   {
     for (int byt = 0; byt < 32; byt++)
-      SPI.transfer (rows[y][byt] ^ 0xff);
+    {
+      SPI.transfer ((rows[disp_screen != 0][y][byt] ^ 0xff) & power_switch);
+    }
 
     digitalWrite(PIN_EN, HIGH);
 
