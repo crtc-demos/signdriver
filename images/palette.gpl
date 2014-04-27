@@ -1,0 +1,11 @@
+GIMP Palette
+Name: Tunk's sign
+Columns: 7
+#
+  0   0   0	Black
+128   0   0	Dark Red
+255   0   0	Bright Red
+255 255   0	Bright Yellow
+128 128   0	Muddy Yellow
+  0 128   0	Dark Green
+  0 255   0	Bright Green
