@@ -55,7 +55,7 @@ static int power_switch = 0x00;
 static int cycles = 4;
 static int mode = 1; /* 0=picture 1=scrolly */
 
-static unsigned char m1_buffer[4];
+static unsigned char m1_buffer[8];
 static int m1_byte = 0;
 static int m1_nybble = 0;
 
@@ -311,18 +311,21 @@ void loop() {
       {
         m1_nybble = 0;
         m1_byte++;
-        if (m1_byte == 4)
+        if (m1_byte == 8)
         {
           m1_byte = 0;
           scroll_left(0, 0, 15, 15);
-          for ( int i = 0; i < 32; i++ )
+          for ( int i = 0; i < 64; i++ )
           {
             int i_byte = i / 8;
             int i_bit = 7 - ( i % 8 ); 
             int bitval = m1_buffer[i_byte] & ( 1 << i_bit );
             if ( bitval > 0 ) { bitval = 0x80; }
-            if ( i < 16 ) { rows[0][i][15] |= bitval; rows[1][i][15] |= bitval; } 
-            if ( i > 15 ) { rows[0][i-16][31] |= bitval; rows[1][i-16][31] |= bitval; } 
+            
+            if ( i >=  0 && i < 16 ) rows[0][i][15] |= bitval;
+            if ( i >= 16 && i < 32 ) rows[0][i-16][15] |= bitval;
+            if ( i >= 32 && i < 48 ) rows[1][i-32][15] |= bitval;
+            if ( i >= 48 && i < 64 ) rows[1][i-48][15] |= bitval;
           }          
         }
       }
