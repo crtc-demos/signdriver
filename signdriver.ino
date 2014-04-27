@@ -53,6 +53,11 @@ static int cur_byte = 0;
 static int disp_screen = 0;
 static int power_switch = 0x00;
 static int cycles = 4;
+static int mode = 1; /* 0=picture 1=scrolly */
+
+static unsigned char m1_buffer[4];
+static int m1_byte = 0;
+static int m1_nybble = 0;
 
 int decodechar (char c)
 {
@@ -204,6 +209,25 @@ void loop() {
   while (Serial.available() > 0)
   {
     int x, incomingByte = Serial.read();
+    if ( incomingByte == 'X' || incomingByte == 'x' )  /* clear the screen */
+    {
+      for ( int s = 0; s < 2; s++ )
+      {
+        for ( int x = 0; x < 16; x++ )
+        {
+          for ( int y = 0; y < 32; y++ )
+          {
+            rows[s][y][x] = 0;
+          }
+        }
+      } 
+      continue;    
+    }
+    if ( incomingByte == ',' )  /* 'reset' in mode 1 */
+    {
+      m1_byte = 0;
+      m1_nybble = 0;
+    }
     if ( incomingByte == 'R' || incomingByte == 'r' )  /* 'reset' */
     {
       cur_screen = 0;
@@ -244,31 +268,67 @@ void loop() {
     x = decodechar (incomingByte);
     if (x == -1)
       continue;
-    if (cur_nybble == 0)
-      rows[cur_screen][cur_row][cur_byte] = x;
-    else
-      rows[cur_screen][cur_row][cur_byte] |= x << 4;
-    cur_nybble++;
-    if (cur_nybble == 2)
-    {
-      cur_nybble = 0;
-      cur_byte++;
-      if (cur_byte == 32)
+
+    /* ================= */
+    
+    if ( mode == 0 )
+    {   
+      if (cur_nybble == 0)
+        rows[cur_screen][cur_row][cur_byte] = x;
+      else
+        rows[cur_screen][cur_row][cur_byte] |= x << 4;
+      cur_nybble++;
+      if (cur_nybble == 2)
       {
-        cur_byte = 0;
-        cur_row++;
-        if (cur_row == 16 )
+        cur_nybble = 0;
+        cur_byte++;
+        if (cur_byte == 32)
         {
-          cur_row = 0;
-            if ( cur_screen == 1 )
-            {
-              power_switch = 0xff;
-            }
-          cur_screen = 1-cur_screen;
+          cur_byte = 0;
+          cur_row++;
+          if (cur_row == 16 )
+          {
+            cur_row = 0;
+              if ( cur_screen == 1 )
+              {
+                power_switch = 0xff;
+              }
+            cur_screen = 1-cur_screen;
+          }
         }
       }
     }
-  }
+   
+    /* ================= */
+
+    if ( mode == 1 )
+      if (m1_nybble == 0)
+        m1_buffer[m1_byte] = x << 4;
+      else
+        m1_buffer[m1_byte] |= x;
+      m1_nybble++;
+      if (m1_nybble == 2)
+      {
+        m1_nybble = 0;
+        m1_byte++;
+        if (m1_byte == 4)
+        {
+          m1_byte = 0;
+          scroll_left(0, 0, 15, 15);
+          for ( int i = 0; i < 32; i++ )
+          {
+            int i_byte = i / 8;
+            int i_bit = 7 - ( i % 8 ); 
+            int bitval = m1_buffer[i_byte] & ( 1 << i_bit );
+            if ( bitval > 0 ) { bitval = 0x80; }
+            if ( i < 16 ) { rows[0][i][15] |= bitval; rows[1][i][15] |= bitval; } 
+            if ( i > 15 ) { rows[0][i-16][31] |= bitval; rows[1][i-16][31] |= bitval; } 
+          }          
+        }
+      }
+    
+  } /* end of while loop */
+
   
   disp_screen = (disp_screen+1) % cycles;
   for ( int y = 0; y < 16  ; y++ )
