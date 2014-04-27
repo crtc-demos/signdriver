@@ -11,9 +11,12 @@ my $max = <B>; chomp($max);
 my @g = ();
 for ( my $y = 0; $y < 16; $y++ ) {
 	for ( my $x = 0; $x < 128; $x++ ) {
-		$r[127-$x][15-$y] = <B>; chomp($r[127-$x][15-$y]);
-		$g[127-$x][15-$y] = <B>; chomp($g[127-$x][15-$y]);
-		$dummy = <B>; # ignore blue component
+		for ( my $c = 0; $c < 3; $c++ ) { 
+			my $line = <B>; chomp($line);
+			if ( $line =~ /^\s*$/ ) { $c--; next; } 
+			if ( $c == 0 ) { $r[127-$x][15-$y] = $line; }
+			if ( $c == 1 ) { $g[127-$x][15-$y] = $line; }
+			}
 		}
 	}
 close(B);
