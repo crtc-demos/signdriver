@@ -220,12 +220,12 @@ void loop() {
     }
     if ( incomingByte == 'Q' || incomingByte == 'q' )  /* increase half-bright brightness */
     {
-      cycles--; if ( cycles < 1 ) { cycles = 1; } 
+      cycles <<= 1; if ( cycles == 0 ) { cycles = 1; } 
       continue;
     }
     if ( incomingByte == 'W' || incomingByte == 'w' )  /* decrease half-bright brightness */
     {
-      cycles++;
+      cycles >>= 1; if ( cycles == 0 ) { cycles = 1; } 
       continue;
     }
     if ( incomingByte == 'H' || incomingByte == 'h' )  /* 'hide' */
