@@ -19,7 +19,6 @@
 
 #define DELAY_MS 2
 #define DELAY_SCAN 1
-#define OFFCYCLES 7
 
 void setup() {
   //pinMode(PIN_S, OUTPUT);
@@ -53,6 +52,7 @@ static int cur_nybble = 0;
 static int cur_byte = 0;
 static int disp_screen = 0;
 static int power_switch = 0x00;
+static int cycles = 4;
 
 int decodechar (char c)
 {
@@ -61,6 +61,142 @@ int decodechar (char c)
     (c >= 'A' && c <= 'F') ? c - 'A' + 10 : 
     (c >= 'a' && c <= 'f') ? c - 'a' + 10 : 
     -1;
+}
+
+int scroll_up (int x0, int y0, int x1, int y1)
+{ 
+  if ( x0 > x1 ) { return -1; } 
+  if ( y0 > y1 ) { return -1; } 
+  if ( x0 < 0 ) { x0 = 0; } 
+  if ( x0 > 15 ) { x0 = 15; } 
+  if ( x1 < 0 ) { x1 = 0; } 
+  if ( x1 > 15 ) { x1 = 15; } 
+  if ( y0 < 0 ) { y0 = 0; } 
+  if ( y0 > 15 ) { y0 = 15; } 
+  if ( y1 < 0 ) { y1 = 0; } 
+  if ( y1 > 15 ) { y1 = 15; } 
+  
+  for ( int s = 0; s < 2; s++ )
+  { 
+    for ( int y = y0 + 1; y <= y1; y++ )
+    { 
+      for ( int x = x0; x <= x1; x++ )
+      {
+        rows[s][y-1][x] = rows[s][y][x];
+        rows[s][y-1][x+16] = rows[s][y][x+16];
+      }
+    }
+    for ( int x = x0; x <= x1; x++ )
+    {
+      rows[s][y1][x] = 0;
+      rows[s][y1][x+16] = 0;
+    }
+  }
+}
+
+int scroll_down (int x0, int y0, int x1, int y1)
+{ 
+  if ( x0 > x1 ) { return -1; } 
+  if ( y0 > y1 ) { return -1; } 
+  if ( x0 < 0 ) { x0 = 0; } 
+  if ( x0 > 15 ) { x0 = 15; } 
+  if ( x1 < 0 ) { x1 = 0; } 
+  if ( x1 > 15 ) { x1 = 15; } 
+  if ( y0 < 0 ) { y0 = 0; } 
+  if ( y0 > 15 ) { y0 = 15; } 
+  if ( y1 < 0 ) { y1 = 0; } 
+  if ( y1 > 15 ) { y1 = 15; } 
+  
+  for ( int s = 0; s < 2; s++ )
+  { 
+    for ( int y = y1 - 1; y >= y0; y-- )
+    { 
+      for ( int x = x0; x <= x1; x++ )
+      {
+        rows[s][y+1][x] = rows[s][y][x];
+        rows[s][y+1][x+16] = rows[s][y][x+16];
+      }
+    }
+    for ( int x = x0; x <= x1; x++ )
+    {
+      rows[s][y0][x] = 0;
+      rows[s][y0][x+16] = 0;
+    }
+  }
+}
+
+int scroll_right (int x0, int y0, int x1, int y1)
+{ 
+  if ( x0 > x1 ) { return -1; } 
+  if ( y0 > y1 ) { return -1; } 
+  if ( x0 < 0 ) { x0 = 0; } 
+  if ( x0 > 15 ) { x0 = 15; } 
+  if ( x1 < 0 ) { x1 = 0; } 
+  if ( x1 > 15 ) { x1 = 15; } 
+  if ( y0 < 0 ) { y0 = 0; } 
+  if ( y0 > 15 ) { y0 = 15; } 
+  if ( y1 < 0 ) { y1 = 0; } 
+  if ( y1 > 15 ) { y1 = 15; } 
+  
+  for ( int s = 0; s < 2; s++ )
+  { 
+    for ( int y = y0; y <= y1; y++ )
+    { 
+      int last_lsb = 0;
+      for ( int x = x0; x <= x1; x++ )
+      {
+        int t = rows[s][y][x] >> 7;        
+        rows[s][y][x] <<= 1;
+        rows[s][y][x] |= last_lsb;
+        last_lsb = t;
+      }
+      last_lsb = 0;
+      for ( int x = x0+16; x <= x1+16; x++ )
+      {
+        int t = rows[s][y][x] >> 7;        
+        rows[s][y][x] <<= 1;
+        rows[s][y][x] |= last_lsb;
+        last_lsb = t;
+      }
+    }
+  }
+}
+
+int scroll_left (int x0, int y0, int x1, int y1)
+{ 
+  if ( x0 > x1 ) { return -1; } 
+  if ( y0 > y1 ) { return -1; } 
+  if ( x0 < 0 ) { x0 = 0; } 
+  if ( x0 > 15 ) { x0 = 15; } 
+  if ( x1 < 0 ) { x1 = 0; } 
+  if ( x1 > 15 ) { x1 = 15; } 
+  if ( y0 < 0 ) { y0 = 0; } 
+  if ( y0 > 15 ) { y0 = 15; } 
+  if ( y1 < 0 ) { y1 = 0; } 
+  if ( y1 > 15 ) { y1 = 15; } 
+  
+  for ( int s = 0; s < 2; s++ )
+  { 
+    for ( int y = y0; y <= y1; y++ )
+    { 
+      int last_msb = 0;
+      for ( int x = x1; x >= x0; x-- )
+      {
+        int t = ( rows[s][y][x] & 1 ) << 7;        
+        rows[s][y][x] >>= 1;
+        rows[s][y][x] |= last_msb;
+        last_msb = t;
+      }
+      last_msb = 0;
+      for ( int x = x1+16; x >= x0+16; x-- )
+      {
+        int t = ( rows[s][y][x] & 1  ) << 7;        
+        rows[s][y][x] >>= 1;
+        rows[s][y][x] |= last_msb;
+        last_msb = t;
+      }
+    }
+  }
 }
 
 void loop() {
@@ -82,6 +218,16 @@ void loop() {
       power_switch = 0xff;
       continue;
     }
+    if ( incomingByte == 'Q' || incomingByte == 'q' )  /* increase half-bright brightness */
+    {
+      cycles--; if ( cycles < 1 ) { cycles = 1; } 
+      continue;
+    }
+    if ( incomingByte == 'W' || incomingByte == 'w' )  /* decrease half-bright brightness */
+    {
+      cycles++;
+      continue;
+    }
     if ( incomingByte == 'H' || incomingByte == 'h' )  /* 'hide' */
     {
       power_switch = 0x00;
@@ -89,38 +235,12 @@ void loop() {
     }
     if ( incomingByte == 'U' || incomingByte == 'u' )  /* scroll 'up' */
     {
-      for ( int s = 0; s < 2; s++ )
-      { 
-        for ( int y = 1; y < 16; y++ )
-        { 
-          for ( int x = 0; x < 32; x++ )
-          {
-            rows[s][y-1][x] = rows[s][y][x];
-          }
-        }
-        for ( int x = 0; x < 32; x++ )
-        {
-          rows[s][15][x] = 0;
-        }
-      }
+      scroll_left(2, 1, 9, 13); continue;
     }    
     if ( incomingByte == 'V' || incomingByte == 'v' )  /* scroll 'down' */
     {
-      for ( int s = 0; s < 2; s++ )
-      { 
-        for ( int y = 14; y >= 0; y-- )
-        { 
-          for ( int x = 0; x < 32; x++ )
-          {
-            rows[s][y+1][x] = rows[s][y][x];
-          }
-        }
-        for ( int x = 0; x < 32; x++ )
-        {
-          rows[s][0][x] = 0;
-        }
-      }
-    }    
+      scroll_left(0, 0, 15, 15); continue;
+    }
     x = decodechar (incomingByte);
     if (x == -1)
       continue;
@@ -150,7 +270,7 @@ void loop() {
     }
   }
   
-  disp_screen = (disp_screen+1) & OFFCYCLES;
+  disp_screen = (disp_screen+1) % cycles;
   for ( int y = 0; y < 16  ; y++ )
   {
     for (int byt = 0; byt < 32; byt++)
