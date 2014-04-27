@@ -43,7 +43,7 @@ void setup() {
   SPI.setClockDivider(SPI_CLOCK_DIV2);
   SPI.begin();
   
-  Serial.begin(9600);
+  Serial.begin(115200);
 }
 
 static unsigned char rows[2][16][32];
@@ -68,7 +68,7 @@ void loop() {
   while (Serial.available() > 0)
   {
     int x, incomingByte = Serial.read();
-    if ( incomingByte == 'R' || incomingByte == 'r' )
+    if ( incomingByte == 'R' || incomingByte == 'r' )  /* 'reset' */
     {
       cur_screen = 0;
       cur_row = 0;
@@ -77,6 +77,50 @@ void loop() {
       power_switch = 0x00;
       continue;
     }
+    if ( incomingByte == 'S' || incomingByte == 's' )  /* 'show' */
+    {
+      power_switch = 0xff;
+      continue;
+    }
+    if ( incomingByte == 'H' || incomingByte == 'h' )  /* 'hide' */
+    {
+      power_switch = 0x00;
+      continue;
+    }
+    if ( incomingByte == 'U' || incomingByte == 'u' )  /* scroll 'up' */
+    {
+      for ( int s = 0; s < 2; s++ )
+      { 
+        for ( int y = 1; y < 16; y++ )
+        { 
+          for ( int x = 0; x < 32; x++ )
+          {
+            rows[s][y-1][x] = rows[s][y][x];
+          }
+        }
+        for ( int x = 0; x < 32; x++ )
+        {
+          rows[s][15][x] = 0;
+        }
+      }
+    }    
+    if ( incomingByte == 'V' || incomingByte == 'v' )  /* scroll 'down' */
+    {
+      for ( int s = 0; s < 2; s++ )
+      { 
+        for ( int y = 14; y >= 0; y-- )
+        { 
+          for ( int x = 0; x < 32; x++ )
+          {
+            rows[s][y+1][x] = rows[s][y][x];
+          }
+        }
+        for ( int x = 0; x < 32; x++ )
+        {
+          rows[s][0][x] = 0;
+        }
+      }
+    }    
     x = decodechar (incomingByte);
     if (x == -1)
       continue;
